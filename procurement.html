@@ -1,0 +1,439 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบติดตามสัญญาจัดซื้อจัดจ้าง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/procurement.css">
+</head>
+<body class="app">
+
+<!-- ══════════════════════ HEADER ══════════════════════ -->
+<header class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-logo">📋</div>
+    <div>
+      <div class="hdr-title">ระบบติดตามสัญญาจัดซื้อจัดจ้าง</div>
+      <div class="hdr-sub">GOVERNMENT PROCUREMENT TRACKER</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <span class="hdr-date" id="hdr-date"></span>
+    <button class="btn btn-gold btn-sm" onclick="openAdd()">+ เพิ่มสัญญาใหม่</button>
+  </div>
+</header>
+
+<!-- ══════════════════════ SIDEBAR ══════════════════════ -->
+<aside class="sidebar">
+  <div class="sb-section">
+    <div class="sb-label">เมนูหลัก</div>
+    <div class="sb-nav active" id="nav-home" onclick="goHome()">
+      <span class="ic">🏠</span> หน้าหลัก (Dashboard)
+    </div>
+    <div class="sb-nav" id="nav-regs" onclick="openRegulations()">
+      <span class="ic">📚</span> ข้อกฎหมาย / ระเบียบ
+    </div>
+    <a class="sb-nav" href="document-generator.html" style="text-decoration:none">
+      <span class="ic">📄</span> สร้างเอกสารราชการ
+    </a>
+  </div>
+  <div class="sb-section sb-section--grow">
+    <div class="u-flex-between sb-section__head">
+      <div class="sb-label sb-label--flush">สัญญาทั้งหมด</div>
+      <span class="sb-count" id="sb-count">0</span>
+    </div>
+    <div class="sb-search">
+      <span class="icon-muted">🔍</span>
+      <input type="text" placeholder="ค้นหาสัญญา..." id="sb-search" oninput="renderSidebar()">
+    </div>
+    <div id="sb-list"></div>
+  </div>
+</aside>
+
+<!-- ══════════════════════ MAIN ══════════════════════ -->
+<main class="main">
+
+<!-- ── DASHBOARD ── -->
+<div class="view active" id="v-home">
+  <div class="ph">
+    <div>
+      <div class="ph-title">📊 ภาพรวมสัญญาทั้งหมด</div>
+      <div class="ph-sub">ติดตามสัญญา งวด และเอกสารที่เกี่ยวข้อง</div>
+    </div>
+    <button class="btn btn-primary" onclick="openAdd()">+ เพิ่มสัญญาใหม่</button>
+  </div>
+  <div class="stats" id="stats-row"></div>
+  <div class="card">
+    <div class="card-hd">
+      <div class="card-title">📁 รายการสัญญา</div>
+      <select class="fc fc--filter" id="f-status-filter" onchange="renderDashboard()">
+        <option value="">ทุกสถานะ</option>
+        <option value="active">กำลังดำเนินการ</option>
+        <option value="completed">เสร็จสิ้น</option>
+        <option value="overdue">เกินกำหนด</option>
+      </select>
+    </div>
+    <div class="card-body">
+      <div class="cg" id="cg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONTRACT DETAIL ── -->
+<div class="view" id="v-detail">
+  <div class="bc">
+    <span class="bc-link" onclick="goHome()">🏠 หน้าหลัก</span>
+    <span>›</span>
+    <span id="bc-name" class="bc-current">สัญญา</span>
+  </div>
+
+  <div class="ph ph--detail">
+    <div class="u-grow">
+      <div class="ph-title word-break" id="d-project-name"></div>
+      <div class="meta-pills">
+        <span id="d-status-badge"></span>
+        <span id="d-contract-no" class="pill"></span>
+        <span id="d-vendor" class="pill"></span>
+      </div>
+    </div>
+    <div class="ph-actions">
+      <button class="btn btn-ghost btn-sm" onclick="editCurrent()">✏️ แก้ไข</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteCurrent()">🗑️ ลบ</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab(this,'t-overview')">📋 ภาพรวม</div>
+    <div class="tab" onclick="switchTab(this,'t-timeline')">📅 ไทม์ไลน์</div>
+    <div class="tab" onclick="switchTab(this,'t-installments')">📂 งวดและเอกสาร</div>
+    <div class="tab" onclick="switchTab(this,'t-dochistory')">📜 ประวัติเอกสาร</div>
+  </div>
+
+  <!-- Overview Tab -->
+  <div id="t-overview" class="tab-pane is-active">
+    <div class="card card--spaced">
+      <div class="card-hd"><div class="card-title">📌 ข้อมูลสัญญา</div></div>
+      <div class="card-body">
+        <div class="ig" id="d-info"></div>
+        <div class="big-prog"><div class="big-prog-fill" id="d-prog-bar"></div></div>
+        <div class="prog-footer">
+          <span>ความคืบหน้าโดยรวม</span>
+          <span id="d-prog-pct" class="prog-pct">0%</span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-title">📝 ขอบเขตงาน (Scope of Work)</div></div>
+      <div class="card-body" id="d-scope"></div>
+    </div>
+  </div>
+
+  <!-- Timeline Tab -->
+  <div id="t-timeline" class="tab-pane">
+    <div class="card">
+      <div class="card-hd"><div class="card-title">📅 ไทม์ไลน์ Gantt</div></div>
+      <div class="card-body">
+        <div class="gantt-box"><div id="gantt-inner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Installments Tab -->
+  <div id="t-installments" class="tab-pane">
+    <div id="inst-list"></div>
+  </div>
+
+  <!-- Document History Tab -->
+  <div id="t-dochistory" class="tab-pane">
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title">📜 ประวัติเอกสาร / ลำดับเหตุการณ์</div>
+        <div class="u-flex u-shrink-0">
+          <button class="btn btn-ghost btn-sm" onclick="openSourceImport()">📂 เลือกแหล่งข้อมูล</button>
+          <button class="btn btn-primary btn-sm" onclick="openDocEventModal(null)">+ เพิ่มเหตุการณ์</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="dwtl-toolbar">
+          <div class="dwtl-filter" id="dwtl-filters">
+            <button type="button" class="dwtl-filter-btn active" onclick="filterDocTimeline(this,'')">ทั้งหมด</button>
+            <button type="button" class="dwtl-filter-btn" onclick="filterDocTimeline(this,'ร่วม')">🤝 ร่วม</button>
+            <button type="button" class="dwtl-filter-btn" onclick="filterDocTimeline(this,'บริษัทฯ')">🏢 บริษัทฯ</button>
+            <button type="button" class="dwtl-filter-btn" onclick="filterDocTimeline(this,'ผู้สั่งจ้าง')">🏛️ ผู้สั่งจ้าง</button>
+          </div>
+          <div class="text-muted-sm" id="dwtl-count"></div>
+        </div>
+        <div id="dwtl-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── REGULATIONS ── -->
+<div class="view" id="v-regulations">
+  <div class="ph">
+    <div>
+      <div class="ph-title">📚 ข้อกฎหมาย / ระเบียบอ้างอิง</div>
+      <div class="ph-sub">จัดการกฎหมายและระเบียบที่เกี่ยวข้องกับสัญญา</div>
+    </div>
+    <div class="ph-actions">
+      <button class="btn btn-ghost btn-sm" onclick="openSourceImport()">📂 เลือกแหล่งข้อมูล</button>
+      <button class="btn btn-primary btn-sm" onclick="openRegModal(null)">+ เพิ่มกฎหมาย</button>
+    </div>
+  </div>
+  <div id="reg-page-body"></div>
+</div>
+
+</main>
+
+<!-- ══════════════════════ MODAL: Doc Event ══════════════════════ -->
+<div class="modal-bg" id="m-docevent">
+  <div class="modal modal--narrow">
+    <div class="modal-hd">
+      <div class="modal-title" id="m-docevent-title">เพิ่มเหตุการณ์</div>
+      <button class="xbtn" onclick="closeModal('m-docevent')">✕</button>
+    </div>
+    <div class="modal-scroll modal-body-pad">
+      <div class="fr">
+        <div class="fg">
+          <label class="fl">วันที่ <span class="req">*</span></label>
+          <input type="date" class="fc" id="de-date">
+        </div>
+        <div class="fg">
+          <label class="fl">เจ้าของ / ผู้ดำเนินการ <span class="req">*</span></label>
+          <select class="fc" id="de-owner">
+            <option value="ร่วม">🤝 ร่วม (ทั้งสองฝ่าย)</option>
+            <option value="บริษัทฯ">🏢 บริษัทฯ (ผู้รับจ้าง)</option>
+            <option value="ผู้สั่งจ้าง">🏛️ ผู้สั่งจ้าง</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">เหตุการณ์ <span class="req">*</span></label>
+        <textarea class="fc" id="de-event" rows="4" placeholder="อธิบายเหตุการณ์..."></textarea>
+      </div>
+      <div class="fg">
+        <label class="fl">ข้อกฎหมาย / ระเบียบ</label>
+        <input type="text" class="fc" id="de-reg" placeholder="เช่น กค (กวจ) 0405.2/ว124 ลงวันที่ 1 มี.ค. 66">
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-docevent')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveDocEvent()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL: Source Import ══════════════════════ -->
+<div class="modal-bg" id="m-source-import">
+  <div class="modal modal--wide">
+    <div class="modal-hd">
+      <div class="modal-title">📂 เลือกแหล่งข้อมูล</div>
+      <button class="xbtn" onclick="closeModal('m-source-import')">✕</button>
+    </div>
+    <div class="modal-scroll modal-body-pad">
+
+      <div class="section-label">ไฟล์ข้อมูลที่พร้อมใช้งาน</div>
+      <div id="src-list"></div>
+
+      <div class="dropzone">
+        <div class="dropzone__title">➕ เพิ่มไฟล์แหล่งข้อมูลใหม่</div>
+        <input type="file" id="src-file-input" class="hidden-file" accept=".json" multiple onchange="handleSourceFiles(this)">
+        <div class="dropzone__actions">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('src-file-input').click()">📁 เลือกไฟล์ .json (หลายไฟล์ได้)</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="downloadSourceTemplate()">⬇️ ดาวน์โหลดแม่แบบ</button>
+        </div>
+        <div class="dropzone__hint">นำเข้าได้พร้อมกันหลายไฟล์ · รูปแบบ JSON ตามแม่แบบ</div>
+      </div>
+
+      <hr class="dv">
+
+      <div class="section-label section-label--spaced">นำเข้าข้อมูลประเภท</div>
+      <div class="import-stack">
+        <label class="import-check">
+          <input type="checkbox" id="imp-events" checked>
+          <div>
+            <span class="import-check__label">📅 เหตุการณ์ (ประวัติเอกสาร)</span>
+            <span id="imp-events-note" class="import-check__note"></span>
+          </div>
+        </label>
+        <label class="import-check">
+          <input type="checkbox" id="imp-regs" checked>
+          <div>
+            <span class="import-check__label">📚 กฎหมาย / ระเบียบ</span>
+            <span class="import-check__note">→ คลังกฎหมาย (ทุกสัญญา)</span>
+          </div>
+        </label>
+      </div>
+
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-source-import')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="importFromSources()">⬇️ นำเข้าที่เลือก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL: Regulation ══════════════════════ -->
+<div class="modal-bg" id="m-regulation">
+  <div class="modal modal--narrow">
+    <div class="modal-hd">
+      <div class="modal-title" id="m-reg-title">เพิ่มกฎหมาย</div>
+      <button class="xbtn" onclick="closeModal('m-regulation')">✕</button>
+    </div>
+    <div class="modal-scroll modal-body-pad">
+      <input type="hidden" id="rm-id">
+      <div class="fg">
+        <label class="fl">รหัส / ชื่อย่อกฎหมาย <span class="req">*</span></label>
+        <input type="text" class="fc" id="rm-code" placeholder="เช่น พรบ.60 หมวด 10 ม.102">
+      </div>
+      <div class="fg">
+        <label class="fl">คำอธิบาย / ชื่อเต็ม</label>
+        <input type="text" class="fc" id="rm-title" placeholder="อธิบายสั้นๆ ว่ากฎหมายนี้เกี่ยวกับอะไร...">
+      </div>
+      <div class="fr">
+        <div class="fg">
+          <label class="fl">หมวดหมู่</label>
+          <select class="fc" id="rm-cat">
+            <option value="พรบ.">📕 พรบ.</option>
+            <option value="ระเบียบ">📋 ระเบียบ</option>
+            <option value="หนังสือเวียน">✉️ หนังสือเวียน</option>
+            <option value="สัญญา">📄 สัญญา</option>
+            <option value="อื่นๆ">📎 อื่นๆ</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">URL เอกสาร</label>
+          <input type="url" class="fc" id="rm-url" placeholder="https://...">
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">สาระสำคัญ / หมายเหตุ</label>
+        <textarea class="fc" id="rm-notes" rows="4" placeholder="สรุปใจความสำคัญของกฎหมายนี้..."></textarea>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('m-regulation')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveRegulation()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL: Add/Edit Contract ══════════════════════ -->
+<div class="modal-bg" id="m-contract">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title" id="m-contract-title">เพิ่มสัญญาใหม่</div>
+      <button class="xbtn" onclick="closeModal('m-contract')">✕</button>
+    </div>
+    <div class="modal-scroll">
+      <!-- Steps -->
+      <div class="steps" id="steps-ind">
+        <div class="step s-active" id="stp1"><div class="step-dot">1</div><div class="step-lbl">ข้อมูลสัญญา</div></div>
+        <div class="step" id="stp2"><div class="step-dot">2</div><div class="step-lbl">ขอบเขตงาน</div></div>
+        <div class="step" id="stp3"><div class="step-dot">3</div><div class="step-lbl">กำหนดงวด</div></div>
+      </div>
+
+      <!-- Step 1 -->
+      <div id="fs1">
+        <div class="fg">
+          <label class="fl">ชื่อโครงการ <span class="req">*</span></label>
+          <input type="text" class="fc" id="f-name" placeholder="ระบุชื่อโครงการ...">
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label class="fl">เลขที่สัญญา</label>
+            <input type="text" class="fc" id="f-cno" placeholder="เช่น สัญญา ๐๐๑/๒๕๖๘">
+          </div>
+          <div class="fg">
+            <label class="fl">ชื่อผู้รับจ้าง / บริษัท <span class="req">*</span></label>
+            <input type="text" class="fc" id="f-vendor" placeholder="ชื่อผู้รับจ้าง">
+          </div>
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label class="fl">มูลค่าสัญญา (บาท)</label>
+            <input type="number" class="fc" id="f-val" placeholder="0.00" min="0">
+          </div>
+          <div class="fg">
+            <label class="fl">จำนวนงวด <span class="req">*</span></label>
+            <input type="number" class="fc" id="f-instcount" min="1" max="30" placeholder="ระบุจำนวนงวด" oninput="syncInstCount()">
+          </div>
+        </div>
+        <div class="fr">
+          <div class="fg">
+            <label class="fl">วันที่เริ่มสัญญา <span class="req">*</span></label>
+            <input type="date" class="fc" id="f-sdate">
+          </div>
+          <div class="fg">
+            <label class="fl">วันที่สิ้นสุดสัญญา <span class="req">*</span></label>
+            <input type="date" class="fc" id="f-edate">
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">หมายเหตุ</label>
+          <textarea class="fc" id="f-notes" placeholder="หมายเหตุเพิ่มเติม..."></textarea>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div id="fs2" style="display:none">
+        <div class="alert alert-info">💡 กำหนดขอบเขตงาน (Scope of Work) รายการสิ่งที่ผู้รับจ้างต้องดำเนินการตามสัญญา</div>
+
+        <!-- Scope Mode Tabs -->
+        <div class="scope-tabs">
+          <button class="btn btn-sm btn-primary" id="scope-tab-bulk" onclick="scopeMode('bulk')">📋 วางข้อความจาก Word</button>
+          <button class="btn btn-ghost btn-sm" id="scope-tab-single" onclick="scopeMode('single')">✏️ เพิ่มทีละรายการ</button>
+        </div>
+
+        <!-- Bulk Paste Panel -->
+        <div id="scope-bulk-panel">
+          <div style="font-size:12px;color:var(--text-3);margin-bottom:8px">
+            วาง (Ctrl+V) ข้อความจาก Word ได้เลย — ระบบจะแยกแต่ละบรรทัดเป็นรายการให้อัตโนมัติ<br>
+            รองรับรูปแบบ: บรรทัดธรรมดา, ลำดับเลข (1. 2. 3.), หัวข้อย่อย (- • ○ ※)
+          </div>
+          <textarea class="fc" id="scope-bulk-input" rows="8"
+            placeholder="วางข้อความขอบเขตงานจาก Word ที่นี่...&#10;&#10;ตัวอย่าง:&#10;1. จัดทำรายงานความก้าวหน้าประจำเดือน&#10;2. พัฒนาระบบฐานข้อมูล&#10;3. ฝึกอบรมผู้ใช้งาน"
+            style="font-size:13px;line-height:1.7"></textarea>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <button class="btn btn-primary btn-sm" onclick="bulkAddScope()">✅ นำเข้ารายการทั้งหมด</button>
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('scope-bulk-input').value=''">🗑 ล้าง</button>
+            <span id="scope-bulk-count" style="font-size:12px;color:var(--text-3)"></span>
+          </div>
+          <div id="scope-bulk-preview" style="margin-top:10px"></div>
+        </div>
+
+        <!-- Single Add Panel -->
+        <div id="scope-single-panel" style="display:none">
+          <div id="scope-list"></div>
+          <div class="air">
+            <input type="text" class="fc" id="scope-new" placeholder="พิมพ์รายการแล้วกด Enter หรือ + เพิ่ม..."
+              onkeydown="if(event.key==='Enter')addScope()">
+            <button class="btn btn-ghost btn-sm" onclick="addScope()">+ เพิ่ม</button>
+          </div>
+        </div>
+
+        <!-- Current scope items (always visible) -->
+        <div id="scope-current" style="margin-top:16px"></div>
+      </div>
+
+      <!-- Step 3 -->
+      <div id="fs3" style="display:none">
+        <div class="alert alert-info">💡 กำหนดรายละเอียดแต่ละงวด ทั้งวันที่ สิ่งส่งมอบ เอกสารจากผู้รับจ้าง และเอกสารที่ต้องดำเนินการ</div>
+        <div id="insts-form"></div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" id="btn-prev" style="display:none" onclick="prevStep()">← ย้อนกลับ</button>
+      <button class="btn btn-ghost" onclick="closeModal('m-contract')">ยกเลิก</button>
+      <button class="btn btn-primary" id="btn-next" onclick="nextStep()">ถัดไป →</button>
+      <button class="btn btn-primary" id="btn-save" style="display:none" onclick="saveContract()">💾 บันทึกสัญญา</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/procurement.js" defer></script>
+</body>
+</html>
